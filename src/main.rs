@@ -294,27 +294,31 @@ fn decode_chunked(data: &Vec<u8>, width: u16, height: u16, bpp: u8, decomp_size:
             );
         }
     }
+    // println!("ofsets: {:?}", offsets);
 
     for i in 0..height as usize {
         let mut ofs = offsets[i] as usize;
         let mut is_final = false;
         let mut length = 0u32;
-        let mut skip = 0u32;
-        let mut row_start = i * width as usize;
+        let mut skip = 0usize;
+        // println!("y: {} ofs: {}", i, ofs);
         while !is_final {
             if width > 256 {
                 is_final = data[ofs + 1] & 0x80 != 0;
                 length =((data[ofs + 1] as u32 & 0x7f) << 8) | data[ofs] as u32;
-                skip = ((data[ofs + 3] as u32) << 8) | data[ofs + 2] as u32;
+                skip = (((data[ofs + 3] as u32) << 8) | data[ofs + 2] as u32) as usize;
                 ofs += 4;
             } else {
                 is_final = data[ofs] & 0x80 != 0;
                 length = data[ofs] as u32 & 0x7f;
-                skip = data[ofs + 1] as u32;
+                skip = data[ofs + 1] as usize;
                 ofs += 2;
             }
             let byte_length = length as usize * bpp as usize;
-            res[row_start..row_start + byte_length].clone_from_slice(&data[ofs..ofs + byte_length]);
+            let start = (i * width as usize + skip) * bpp as usize;
+            // println!("is_final: {} length: {} skip: {}, start: {}+{} ofs: {}/{} - {}", is_final, length, skip, start, byte_length, ofs, data.len(), ofs + byte_length);
+            res[start..start + byte_length].clone_from_slice(&data[ofs..ofs + byte_length]);
+            ofs += byte_length;
         }
     }
     return res;
@@ -337,7 +341,7 @@ fn read_sprite(rw: &mut BufRW) -> Sprite {
 
     let mut decomp_size = if uses_tile_compression { rw.get_dword() } else { width as u32 * height as u32 * bpp as u32 };
 
-    // println!("Sprite t{} z{} {}x{} +{}+{} size={}", t, zoom, width, height, xofs, yofs, decomp_size);
+    // println!("Sprite t{} z{} {}x{} +{}+{} size={}({}) {}", t, zoom, width, height, xofs, yofs, decomp_size, uses_tile_compression, width as u32 * height as u32 * bpp as u32);
 
     let mut data = Vec::<u8>::with_capacity(decomp_size as usize);
 
