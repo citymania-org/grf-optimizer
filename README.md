@@ -1,2 +1,2 @@
 # grf-optimizer
-Command-line tool to optimeze grf file size.
+Command-line tool to optimize grf file size.
